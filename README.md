@@ -85,28 +85,37 @@ services.lancache = {
   sliceSize = "1m";
 
   /*
-    Sets the default logging format
+    Sets the access log format
 
     Nothing corresponds to this option in the standard lancache config
     Set it to cachelog-json to output json logs
   */
   logFormat = "cachelog";
 
-  domainsPackage = pkgs.fetchFromGitHub {
-    owner = "uklans";
-    repo = "cache-domains";
-    rev = "1f5897f4dacf3dab5f4d6fca2fe497d3327eaea9";
-    sha256 = "sha256-xrHuYIrGSzsPtqErREMZ8geawvtYcW6h2GyeGMw1I88=";
-  };
-
   # Defines the number of worker processes.
   workerProcesses = "auto";
 };
 ```
 
-## Adding the Slice Module to nginx
+The domain list comes from [uklans/cache-domains](https://github.com/uklans/cache-domains),
+pinned by this flake. You can override it with `domainsPackage`, but you then
+have to keep it up to date yourself.
 
-Lancaching will require you to enable the http slice module for nginx.
+## Logging
+
+All logs go to journald, tagged by component:
+
+```sh
+journalctl -t lancache           # cache access and errors
+journalctl -t lancache_upstream  # upstream proxy
+journalctl -t lancache_stream    # HTTPS (SNI) passthrough
+journalctl -u nginx              # everything
+```
+
+## nginx package
+
+Lancache requires the nginx http slice module. The module builds nginx with it
+by default. If you set your own `services.nginx.package`, it must include it:
 
 ```nix
 {pkgs, ...}: {

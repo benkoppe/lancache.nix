@@ -115,7 +115,6 @@ with lib.options;
 
       cacheLocation = mkOption {
         type = types.str;
-        default = null;
         description = ''
           Sets the location to put the cached data in
         '';
@@ -356,7 +355,7 @@ with lib.options;
 
             extraConfig = # nginx
               ''
-                access_log ${journal "lancache"} cachelog;
+                access_log ${journal "lancache"} ${cfg.logFormat};
                 error_log ${journal "lancache"};
 
                 # sites-available/cache.conf.d/10_root.conf
