@@ -126,8 +126,8 @@ with lib.options;
         default = pkgs.fetchFromGitHub {
           owner = "uklans";
           repo = "cache-domains";
-          rev = "67594ce10c85250bf5e3cc3c6f4a0abb90abd25c";
-          sha256 = "sha256-MRyIz1l23B/ibVc1sPi6BwtB0imi47z1gqQxm5PM60Q=";
+          rev = "f7d6206f4769d6bf0274b5ad79e6bebda7753b17";
+          sha256 = "sha256-uChBLKfpGX4XHMGk/R/Pd8C67cQY778S8tpXx68Uqcs=";
         };
       };
 
@@ -500,6 +500,7 @@ with lib.options;
             locations."/nginx_status" = {
               extraConfig = ''
                 stub_status;
+                access_log off;
               '';
             };
 
@@ -589,7 +590,8 @@ with lib.options;
 
                 # etc/nginx/stream-available(enabled)/10_sni.conf
                 server {
-                  listen ${cfg.listenAddress}:443 default_server;
+                  listen ${cfg.listenAddress}:443 reuseport default_server;
+                  ${lib.optionalString config.networking.enableIPv6 "listen [::]:443 reuseport default_server;"}
                   server_name _;
                   resolver ${cfg.upstreamDns} ipv6=off;
                   proxy_pass  $ssl_preread_server_name:443;
