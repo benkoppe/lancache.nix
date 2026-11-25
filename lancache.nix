@@ -7,6 +7,12 @@
 with lib.types;
 with lib.options;
 {
+  imports = [
+    (lib.mkRemovedOptionModule [ "services" "lancache" "logPrefix" ] ''
+      lancache now logs exclusively to journald. Use e.g.
+      `journalctl -t lancache` / `-t lancache_upstream` / `-t lancache_stream`.
+    '')
+  ];
 
   options = {
     services.lancache = {
@@ -108,15 +114,6 @@ with lib.options;
       };
 
       cacheLocation = mkOption {
-        type = types.str;
-        default = null;
-        description = ''
-          Sets the location to put the cached data in
-        '';
-      };
-
-      # TODO: might have to create this
-      logPrefix = mkOption {
         type = types.str;
         default = null;
         description = ''
@@ -247,6 +244,9 @@ with lib.options;
           }
         '';
 
+      # nginx only allows [A-Za-z0-9_] in tags
+      journal = tag: "syslog:server=unix:/dev/log,tag=${tag},nohostname";
+
     in
     lib.mkIf cfg.enable
 
@@ -291,8 +291,8 @@ with lib.options;
               #default_type application/octet-stream;
 
               # logs
-              # access_log /var/log/nginx/access.log;
-              # error_log /var/log/nginx/error.log;
+              access_log ${journal "nginx"} combined;
+              error_log ${journal "nginx"};
 
               # part of cfg.recommendedGzipSettings
               # gzip on;
@@ -346,8 +346,8 @@ with lib.options;
 
             extraConfig = # nginx
               ''
-                access_log ${cfg.logPrefix}/access.log cachelog;
-                error_log ${cfg.logPrefix}/error.log;
+                access_log ${journal "lancache"} cachelog;
+                error_log ${journal "lancache"};
 
                 # sites-available/cache.conf.d/10_root.conf
                 resolver ${cfg.upstreamDns} ipv6=off;
@@ -523,10 +523,8 @@ with lib.options;
               extraConfig =
                 # nginx
                 ''
-                  # No access_log tracking as all requests to this instance are already logged through monolithic
-
-                  access_log ${cfg.logPrefix}/upstream-access.log ${cfg.logFormat};
-                  error_log ${cfg.logPrefix}/upstream-error.log;
+                  access_log ${journal "lancache_upstream"} ${cfg.logFormat};
+                  error_log ${journal "lancache_upstream"};
 
                   #include /etc/nginx/sites-available/upstream.conf.d/*.conf;
                   #10_resolver.conf
@@ -597,8 +595,8 @@ with lib.options;
                   proxy_pass  $ssl_preread_server_name:443;
                   ssl_preread on;
 
-                  access_log ${cfg.logPrefix}/stream-access.log stream_basic;
-                  error_log ${cfg.logPrefix}/stream-error.log;
+                  access_log ${journal "lancache_stream"} stream_basic;
+                  error_log ${journal "lancache_stream"};
                 }
             '';
         };

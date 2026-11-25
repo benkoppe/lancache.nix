@@ -19,7 +19,6 @@ go to the lancache authors.
 services.lancache = {
   enable = true;
   cacheLocation = "/mnt/storage/lancache";
-  logPrefix = "/var/log/nginx/lancache";
   # the listen address you want lancache to use.
   listenAddress = "10.0.0.2";
 
