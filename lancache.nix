@@ -253,11 +253,21 @@ with lib.options;
       {
         services.lancache.domainIndex = index;
 
+        assertions = [
+          {
+            assertion = lib.elem "--with-http_slice_module" (
+              config.services.nginx.package.configureFlags or [ ]
+            );
+            message = "services.lancache requires nginx built with the slice module, e.g. `pkgs.nginxMainline.override { withSlice = true; }`.";
+          }
+        ];
+
         # TODO: only add this if this isn't a path nginx can write to
         systemd.services.nginx.serviceConfig.ReadWritePaths = [ cfg.cacheLocation ];
 
         services.nginx = {
           enable = true;
+          package = lib.mkDefault (pkgs.nginx.override { withSlice = true; });
           eventsConfig = # nginx
             ''
               worker_connections 4096;
