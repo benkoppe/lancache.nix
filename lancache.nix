@@ -141,25 +141,14 @@ with lib.options;
         description = "Parsed domains list";
       };
 
-      workerProcesses =
-        lib.mkOption {
-          type = lib.types.oneOf [
-            (types.enum [ "auto" ])
-            (types.ints.u32)
-          ];
-          description = ''
-            Defines the number of worker processes.
+      workerProcesses = lib.mkOption {
+        type = lib.types.either lib.types.ints.positive (lib.types.enum [ "auto" ]);
 
-
-            Corresponds to the environment variable: `NGINX_WORKER_PROCESSES` in standard
-            lancache config.
-
-          '';
-          default = "auto";
-        }
-        // {
-          apply = (builtins.toString);
-        };
+        description = ''
+          Defines the number of worker processes.
+        '';
+        default = "auto";
+      };
 
       listenAddress = mkOption {
         type = types.str;
@@ -244,7 +233,7 @@ with lib.options;
           }) (map convertIntoRegex entry.domains)
         ))
         (lib.flatten)
-        (map (mapEntry: ''~.*£££.*?${mapEntry.host} ${mapEntry.cacheKey};''))
+        (map (mapEntry: "~.*£££.*?${mapEntry.host} ${mapEntry.cacheKey};"))
         (lib.concatStringsSep "\n    ")
       ];
 
@@ -279,12 +268,7 @@ with lib.options;
           recommendedOptimisation = true;
           recommendedGzipSettings = true;
 
-          appendConfig =
-            #nginx
-            ''
-              # workers.conf
-              worker_processes ${builtins.toString cfg.workerProcesses};
-            '';
+          inherit (cfg) workerProcesses;
 
           appendHttpConfig = # nginx
             ''
@@ -338,28 +322,27 @@ with lib.options;
           # Primary monolithic cache engine
           virtualHosts.generic = {
 
-            listen =
-              [
-                {
-                  addr = cfg.listenAddress;
-                  port = 80;
-                  extraParameters = [
-                    "reuseport"
-                    "default_server"
-                  ];
-                }
-              ]
-              # FIXME: add separate ip address for ipv6
-              ++ (lib.optional config.networking.enableIPv6 {
-                addr = "[::]";
+            listen = [
+              {
+                addr = cfg.listenAddress;
                 port = 80;
                 extraParameters = [
                   "reuseport"
                   "default_server"
                 ];
               }
+            ]
+            # FIXME: add separate ip address for ipv6
+            ++ (lib.optional config.networking.enableIPv6 {
+              addr = "[::]";
+              port = 80;
+              extraParameters = [
+                "reuseport"
+                "default_server"
+              ];
+            }
 
-              );
+            );
 
             extraConfig = # nginx
               ''
@@ -480,7 +463,7 @@ with lib.options;
               '';
             };
 
-            # 23_steam_server_status.conf 
+            # 23_steam_server_status.conf
             locations."= /server-status" = {
               extraConfig = ''
                 proxy_cache_bypass 1;
@@ -503,7 +486,7 @@ with lib.options;
             };
 
           };
-          # 30_metrics.conf 
+          # 30_metrics.conf
           # Metrics endpoint
           virtualHosts.metrics = {
             listen = [
